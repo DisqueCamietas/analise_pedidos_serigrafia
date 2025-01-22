@@ -43,7 +43,7 @@ export function Dashboard() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            Análise de Pedidos
+            Análise de pedidos personalizados
           </Typography>
           <Typography variant="body1" sx={{ mr: 2 }}>
             {currentUser?.email}
