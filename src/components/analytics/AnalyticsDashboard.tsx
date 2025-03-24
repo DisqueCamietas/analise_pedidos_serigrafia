@@ -10,8 +10,7 @@ import {
   Alert,
   Card,
   CardContent,
-  Divider,
-  Skeleton
+  Divider
 } from '@mui/material';
 import { 
   Chart as ChartJS, 

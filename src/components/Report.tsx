@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ref, get, update, push, serverTimestamp } from 'firebase/database';
+import { ref, get, update, push } from 'firebase/database';
 import { database } from '../config/firebase';
 import { FilterValues } from './Filters';
 import { useAuth } from '../contexts/AuthContext';
