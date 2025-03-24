@@ -13,6 +13,8 @@ import {
   Paper
 } from '@mui/material';
 import { subDays } from 'date-fns';
+import PaymentIcon from '@mui/icons-material/Payment';
+import BarChartIcon from '@mui/icons-material/BarChart';
 
 export function Dashboard() {
   const { currentUser, logout } = useAuth();
@@ -38,6 +40,14 @@ export function Dashboard() {
     setFilters(newFilters);
   };
 
+  const handleNavigateToCheckout = () => {
+    navigate('/fechamento-fornecedor');
+  };
+
+  const handleNavigateToAnalytics = () => {
+    navigate('/analytics');
+  };
+
   return (
     <Box sx={{ flexGrow: 1 }}>
       <AppBar position="static">
@@ -45,6 +55,22 @@ export function Dashboard() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Análise de pedidos personalizados
           </Typography>
+          <Button 
+            color="inherit" 
+            startIcon={<BarChartIcon />}
+            onClick={handleNavigateToAnalytics}
+            sx={{ mr: 2 }}
+          >
+            Analytics
+          </Button>
+          <Button 
+            color="inherit" 
+            startIcon={<PaymentIcon />}
+            onClick={handleNavigateToCheckout}
+            sx={{ mr: 2 }}
+          >
+            Fechamento de Fornecedor
+          </Button>
           <Typography variant="body1" sx={{ mr: 2 }}>
             {currentUser?.email}
           </Typography>

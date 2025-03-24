@@ -27,7 +27,7 @@ export interface FilterValues {
   startDate: Date;
   endDate: Date;
   fornecedor: string;
-  status: 'finalizado' | 'aberto';
+  status: 'finalizado' | 'aberto' | 'cancelado';
   numeroPedido: string;
 }
 
@@ -123,6 +123,11 @@ export function Filters({ onFilterChange }: FiltersProps) {
                   value="aberto"
                   control={<Radio />}
                   label="Aberto"
+                />
+                <FormControlLabel
+                  value="cancelado"
+                  control={<Radio />}
+                  label="Cancelado"
                 />
               </RadioGroup>
             </FormControl>
