@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { ref, get, update, push, serverTimestamp } from 'firebase/database';
 import { database } from '../config/firebase';
 import { databaseProducao } from '../config/firebaseProducao';
-import { initializeApp } from 'firebase/app';
-import { getDatabase } from 'firebase/database';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Paper,
@@ -198,9 +196,6 @@ export function NewCheckout() {
         dataEnvio: pedido.dataEnvio
       }));
       
-      // Histórico para o Bling
-      const historicoBling = `Fechamento #${fechamentoId} - ${pedidosInfo.length} pedidos - Fornecedor: ${fornecedor}`;
-      
       // Preparar dados para o Bling
       const dadosBling = {
         vencimento: dataVencimento,
@@ -347,9 +342,9 @@ export function NewCheckout() {
         setPedidos(filteredPedidos);
       }
       
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Erro ao processar fechamento:', error);
-      setError(`Erro: ${error.message}`);
+      setError(`Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
