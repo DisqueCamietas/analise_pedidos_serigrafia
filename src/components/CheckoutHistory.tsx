@@ -79,6 +79,7 @@ function Row(props: RowProps) {
         <TableCell component="th" scope="row">
           {id}
         </TableCell>
+        <TableCell>{format(new Date(fechamento.dataRegistro), 'dd/MM/yyyy HH:mm')}</TableCell>
         <TableCell>{format(parseISO(fechamento.dataPagamento), 'dd/MM/yyyy')}</TableCell>
         <TableCell>{fechamento.fornecedor}</TableCell>
         <TableCell align="right">R$ {fechamento.valorTotal}</TableCell>
@@ -99,7 +100,7 @@ function Row(props: RowProps) {
       
       {/* Detalhes dos pedidos */}
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="h6" gutterBottom component="div">
@@ -134,7 +135,7 @@ function Row(props: RowProps) {
       
       {/* Log de alterações */}
       <TableRow>
-        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={7}>
+        <TableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={8}>
           <Collapse in={logOpen} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="h6" gutterBottom component="div">
@@ -333,6 +334,7 @@ export function CheckoutHistory() {
               <TableRow>
                 <TableCell />
                 <TableCell>ID</TableCell>
+                <TableCell>Data de Registro</TableCell>
                 <TableCell>Data de Pagamento</TableCell>
                 <TableCell>Fornecedor</TableCell>
                 <TableCell align="right">Valor Total</TableCell>

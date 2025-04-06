@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { ref, get, update, push, serverTimestamp } from 'firebase/database';
 import { database } from '../config/firebase';
+import { databaseProducao } from '../config/firebaseProducao';
+import { initializeApp } from 'firebase/app';
+import { getDatabase } from 'firebase/database';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Paper,
@@ -28,7 +31,7 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, addDays } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
 
 interface Pedido {
@@ -68,6 +71,7 @@ export function NewCheckout() {
   const [dataPagamento, setDataPagamento] = useState<Date | null>(new Date());
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [apiKey, setApiKey] = useState<string>('');
 
   useEffect(() => {
     const fetchPedidos = async () => {
@@ -102,6 +106,25 @@ export function NewCheckout() {
     };
 
     fetchPedidos();
+  }, []);
+
+  useEffect(() => {
+    const fetchApiKey = async () => {
+      try {
+        const apiKeyRef = ref(databaseProducao, 'api/api');
+        const snapshot = await get(apiKeyRef);
+        if (snapshot.exists()) {
+          setApiKey(snapshot.val());
+        } else {
+          console.error('API Key do Bling não encontrada. Caminho:', 'api/api');
+          setError('API Key do Bling não encontrada');
+        }
+      } catch (error) {
+        console.error('Erro ao buscar API Key:', error);
+        setError('Erro ao buscar API Key do Bling');
+      }
+    };
+    fetchApiKey();
   }, []);
 
   const handleFornecedorChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -143,15 +166,18 @@ export function NewCheckout() {
     }
 
     try {
+      setLoading(true);
+
       // Calcular valor total
       const pedidosSelecionados = pedidos.filter(([id, _]) => selectedPedidos.includes(id));
       const valorTotal = pedidosSelecionados.reduce((total, [_, pedido]) => {
         return total + parseFloat(pedido.valor.replace(',', '.'));
-      }, 0).toFixed(2).replace('.', ',');
-
+      }, 0);
+      
+      const valorTotalFormatado = valorTotal.toFixed(2).replace('.', ',');
       const fornecedor = pedidosSelecionados[0][1].fornecedor;
       
-      // Criar novo fechamento
+      // Criar novo fechamento (ID apenas, não salvar ainda)
       const fechamentosRef = ref(database, 'fechamentos');
       const newFechamentoRef = push(fechamentosRef);
       const fechamentoId = newFechamentoRef.key;
@@ -160,32 +186,111 @@ export function NewCheckout() {
         throw new Error('Erro ao gerar ID do fechamento');
       }
       
+      // Formatar datas
+      const hoje = new Date();
+      const dataVencimento = format(addDays(hoje, 2), 'yyyy-MM-dd');
+      const dataHoje = format(hoje, 'yyyy-MM-dd');
+      
+      // Informações dos pedidos para o histórico
       const pedidosInfo = pedidosSelecionados.map(([id, pedido]) => ({
         numeroPedido: id,
         valor: pedido.valor,
         dataEnvio: pedido.dataEnvio
       }));
       
+      // Histórico para o Bling
+      const historicoBling = `Fechamento #${fechamentoId} - ${pedidosInfo.length} pedidos - Fornecedor: ${fornecedor}`;
+      
+      // Preparar dados para o Bling
+      const dadosBling = {
+        vencimento: dataVencimento,
+        valor: valorTotal,
+        contato: {
+          id: "16949456496" // ID fixo do fornecedor
+        },
+        categoria: {
+          id: "14690272874" // ID da categoria
+        },
+        dataEmissao: dataHoje,
+        competencia: dataHoje,
+        historico: `Fechamento fornecedor ${fornecedor} - ${dataHoje}`
+      };
+      
+      // Gera o comando curl equivalente
+      const curlCommand = `curl -X POST 'https://api.bling.com.br/Api/v3/contas/pagar' \\
+        -H 'Accept: application/json' \\
+        -H 'Content-Type: application/json' \\
+        -H 'Authorization: Bearer ${apiKey}' \\
+        -d '${JSON.stringify(dadosBling, null, 2)}'`;
+      
+      // Envia requisição para o Bling
+      const response = await fetch('/api/bling/Api/v3/contas/pagar', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(dadosBling)
+      });
+
+      // Obtém o texto bruto da resposta
+      const responseText = await response.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        responseData = null;
+      }
+
+      // Adiciona log no Firebase
+      const logRef = ref(database, 'logs');
+      await push(logRef, {
+        tipo: 'bling_request',
+        data: serverTimestamp(),
+        curl_command: curlCommand,
+        webhook_response: {
+          status: response.status,
+          statusText: response.statusText,
+          raw_response: responseText,
+          parsed_response: responseData
+        }
+      });
+
+      // Só considera sucesso se o status for 200 ou 201
+      if (response.status !== 200 && response.status !== 201) {
+        throw new Error(`Erro ao criar conta no Bling. Status: ${response.status} - ${response.statusText}\nResposta: ${responseText}`);
+      }
+
+      // Como não podemos ler a resposta, vamos usar um ID temporário
+      const tempBlingId = `TEMP_${Date.now()}`;
+      
+      // Após sucesso no Bling, continuar com a criação do fechamento no Firebase
       // Log de criação
       const logItem: LogItem = {
         tipo: 'criacao',
         usuario: currentUser.email || 'usuário desconhecido',
         data: Date.now(),
-        detalhes: `Fechamento criado com ${pedidosInfo.length} pedidos no valor total de R$ ${valorTotal}`
+        detalhes: `Fechamento criado com ${pedidosInfo.length} pedidos no valor total de R$ ${valorTotalFormatado}. Conta a pagar registrada no Bling.`
       };
       
       // Dados do fechamento
       const fechamentoData = {
         fornecedor,
-        dataPagamento: format(dataPagamento, 'yyyy-MM-dd'),
-        valorTotal,
+        dataPagamento: dataVencimento,
+        valorTotal: valorTotalFormatado,
         pedidos: pedidosInfo,
         usuario: currentUser.email || 'usuário desconhecido',
         dataRegistro: serverTimestamp(),
-        log: [logItem]
+        log: [logItem],
+        blingRegistro: {
+          registrado: true,
+          idContasPagar: tempBlingId,
+          dataRegistro: dataHoje
+        }
       };
       
-      // Salvar fechamento
+      // Salvar fechamento no Firebase
       await update(newFechamentoRef, fechamentoData);
       
       // Atualizar cada pedido com o ID do fechamento
@@ -222,7 +327,7 @@ export function NewCheckout() {
       // Limpar seleção e mostrar mensagem de sucesso
       setSelectedPedidos([]);
       setConfirmDialogOpen(false);
-      setSuccess(`Fechamento criado com sucesso! ID: ${fechamentoId}`);
+      setSuccess(`Fechamento criado com sucesso! ID: ${fechamentoId}. Conta a pagar registrada no Bling.`);
       
       // Recarregar pedidos para atualizar a lista
       const pedidosRef = ref(database, 'pedidos');
@@ -243,8 +348,10 @@ export function NewCheckout() {
       }
       
     } catch (error) {
-      console.error('Erro ao criar fechamento:', error);
-      setError('Erro ao criar fechamento. Tente novamente.');
+      console.error('Erro ao processar fechamento:', error);
+      setError(`Erro: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
