@@ -169,7 +169,7 @@ export function NewCheckout() {
       // Calcular valor total
       const pedidosSelecionados = pedidos.filter(([id, _]) => selectedPedidos.includes(id));
       const valorTotal = pedidosSelecionados.reduce((total, [_, pedido]) => {
-        return total + parseFloat(pedido.valor.replace(',', '.'));
+        return total + parseFloat(pedido.custo.replace(',', '.'));
       }, 0);
       
       const valorTotalFormatado = valorTotal.toFixed(2).replace('.', ',');
@@ -192,7 +192,7 @@ export function NewCheckout() {
       // Informações dos pedidos para o histórico
       const pedidosInfo = pedidosSelecionados.map(([id, pedido]) => ({
         numeroPedido: id,
-        valor: pedido.valor,
+        custo: pedido.custo,
         dataEnvio: pedido.dataEnvio
       }));
       
@@ -357,7 +357,7 @@ export function NewCheckout() {
   const totalSelecionado = pedidos
     .filter(([id, _]) => selectedPedidos.includes(id))
     .reduce((total, [_, pedido]) => {
-      return total + parseFloat(pedido.valor.replace(',', '.'));
+      return total + parseFloat(pedido.custo.replace(',', '.'));
     }, 0)
     .toFixed(2)
     .replace('.', ',');
@@ -451,7 +451,7 @@ export function NewCheckout() {
                 <TableCell>Número</TableCell>
                 <TableCell>Data</TableCell>
                 <TableCell>Fornecedor</TableCell>
-                <TableCell align="right">Valor (R$)</TableCell>
+                <TableCell align="right">Custo (R$)</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -466,7 +466,7 @@ export function NewCheckout() {
                   <TableCell>{numero}</TableCell>
                   <TableCell>{format(parseISO(pedido.dataEnvio), 'dd/MM/yyyy')}</TableCell>
                   <TableCell>{pedido.fornecedor}</TableCell>
-                  <TableCell align="right">{pedido.valor}</TableCell>
+                  <TableCell align="right">{pedido.custo}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -481,7 +481,7 @@ export function NewCheckout() {
           <Box sx={{ mt: 2, mb: 3 }}>
             <Typography variant="body1" gutterBottom>
               Você está prestes a gerar um fechamento para {selectedPedidos.length} pedidos
-              no valor total de R$ {totalSelecionado}.
+              no custo total de R$ {totalSelecionado}.
             </Typography>
             
             <Typography variant="body2" color="text.secondary" gutterBottom>
