@@ -62,6 +62,7 @@ export function NewCheckout() {
   const { currentUser } = useAuth();
   const [pedidos, setPedidos] = useState<[string, Pedido][]>([]);
   const [fornecedores, setFornecedores] = useState<string[]>(['Todos']);
+  const [fornecedoresMap, setFornecedoresMap] = useState<Record<string, string>>({});
   const [selectedFornecedor, setSelectedFornecedor] = useState<string>('Todos');
   const [selectedPedidos, setSelectedPedidos] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,6 +124,31 @@ export function NewCheckout() {
       }
     };
     fetchApiKey();
+  }, []);
+
+  // Buscar os IDs dos fornecedores do Firebase
+  useEffect(() => {
+    const fetchFornecedoresIds = async () => {
+      try {
+        const fornecedoresRef = ref(database, 'fornecedores');
+        const snapshot = await get(fornecedoresRef);
+        if (snapshot.exists()) {
+          const data = snapshot.val();
+          const fornecedoresData: Record<string, string> = {};
+          
+          // Mapear nomes de fornecedores para seus IDs
+          Object.entries(data).forEach(([id, fornecedor]: [string, any]) => {
+            fornecedoresData[fornecedor.nome] = id;
+          });
+          
+          setFornecedoresMap(fornecedoresData);
+        }
+      } catch (error) {
+        console.error('Erro ao buscar IDs dos fornecedores:', error);
+      }
+    };
+    
+    fetchFornecedoresIds();
   }, []);
 
   const handleFornecedorChange = (event: React.ChangeEvent<{ value: unknown }>) => {
@@ -201,7 +227,7 @@ export function NewCheckout() {
         vencimento: dataVencimento,
         valor: valorTotal,
         contato: {
-          id: "16949456496" // ID fixo do fornecedor
+          id: fornecedoresMap[fornecedor] || "" // Busca o ID do fornecedor pelo nome
         },
         categoria: {
           id: "14690272874" // ID da categoria
@@ -210,6 +236,9 @@ export function NewCheckout() {
         competencia: dataHoje,
         historico: `Fechamento fornecedor ${fornecedor} - ${dataHoje}`
       };
+      
+      // Log para debug
+      console.log(`Fornecedor: ${fornecedor}, ID: ${fornecedoresMap[fornecedor]}`);
       
       // Gera o comando curl equivalente
       const curlCommand = `curl -X POST 'https://api.bling.com.br/Api/v3/contas/pagar' \\
